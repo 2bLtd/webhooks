@@ -1,0 +1,35 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#echo "Hooks dir : $DIR"
+
+chmod +x $DIR/setup.sh
+bash $DIR/setup.sh
+
+# Prevents commit in incorrect branch
+
+BRANCH=`git rev-parse --abbrev-ref HEAD`
+NAME_BRANCHES="^(IOS-[0-9]+|AI-[0-9]+)"
+
+if [[ "$BRANCH" =~ $NAME_BRANCHES ]]; then
+  # add branch name to commit message
+  echo "$BRANCH $(cat $1)" > $1
+  true
+else
+  echo "Prevented commit to incorrect branch name \"$BRANCH\" -  pre-commit hook"
+  echo "Branch naming:('IOS-123') or ('AI-123')"
+  exit 1
+fi
+
+vbc=$(git rev-parse --abbrev-ref HEAD)
+vbc_col=$(( $(git show-branch | grep '^[^\[]*\*' | head -1 | cut -d* -f1 | wc -c) - 1 )) 
+swimming_lane_start_row=$(( $(git show-branch | grep -n "^[\-]*$" | cut -d: -f1) + 1 )) 
+PARENT_BRANCH=`git show-branch | tail -n +$swimming_lane_start_row | grep -v "^[^\[]*\[$vbc" | grep "^.\{$vbc_col\}[^ ]" | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//'`
+
+if [[ "$PARENT_BRANCH" != "master" ]]; then
+  # echo "All branches should be branched from master - pre-commit hook"
+  # echo "\"$BRANCH\" is branched from $PARENT_BRANCH"
+  #exit 1
+  true
+fi
+
+exit 0
